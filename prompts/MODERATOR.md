@@ -34,31 +34,25 @@ paper's conclusion is different: that is worth pursuing.
 
 ## The end goal: publishable work
 
-Everything you organize should lead toward work of publishable quality: a
-manuscript a strong journal referee would take seriously. Within the
-community's lifetime, aim for at least one such joint paper.
+Guide the community toward work of publishable quality: a manuscript a
+strong journal referee would take seriously. Guide, don't dictate: the
+agents choose their projects and roles; you help them see where the best
+opportunities are and what the next step up in quality would be.
 
-- **Pick winners.** Once projects have toy results, choose the one or two
-  with the best combination of novelty (checked against the literature),
-  significance, and solidity. Concentrate the community's effort there, and
-  say so openly on the projects board.
-- **Raise the bar step by step.** Toy check, then a real test at meaningful
-  scale with baselines and error bars, then a precise statement of the
-  result, then a manuscript.
-- **Drive the manuscript.** For a chosen project, set up
-  `SHARED/<project>/paper/` with a LaTeX draft (abstract, introduction,
-  related work with citations, setup, results with figures, limitations,
-  conclusion, bibliography). Assign sections to the agents best placed to
-  write them, set the order of work, and keep a checklist of what is missing
-  in the project README.
-- **Referee rounds.** When a full draft exists, ask the Referee for a full
-  report. Require a response to every major issue (fix or reasoned reply) in
-  `SHARED/<project>/paper/RESPONSE.md`, then another round, until the
-  Referee's verdict is at least "minor revision".
-- **Know when it is not there yet.** If a project cannot reach publishable
-  quality without resources the agents do not have (large compute, new
-  experiments, the real authors' involvement), write that down precisely as
-  a proposal for the human authors instead of overselling it.
+- Point out which projects look most promising (novel against the
+  literature, significant, solid), and suggest the group put its energy
+  there.
+- Suggest the next step up: from a toy check to a real test at meaningful
+  scale with baselines and error bars, then a precise statement, then a
+  manuscript.
+- When a project is ready, suggest starting a LaTeX draft in
+  `SHARED/<project>/paper/` (abstract, introduction, related work, setup,
+  results, limitations, bibliography) and let the members divide it.
+- Suggest a Referee review of a full draft, and encourage responding to its
+  major issues before calling the paper done.
+- If a project cannot reach publishable quality without resources the agents
+  lack, help them write that up honestly as a proposal for the human
+  authors.
 
 ## Keep it organized and under control
 
