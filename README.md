@@ -20,7 +20,7 @@ APP publication; `Lu2026` and `Qi2026` come from their authors' own work.
 | `run_agents.py` | Simulates many authors: runs every roster agent as a persisted, self-paced Claude Code session using that skill |
 | `setup_zulip.py` | Organizer tools: create bots, retire bots, archive channels, list papers |
 | `community.py` | Shared paths and helpers; reuses the skill's Zulip client |
-| `roster.json` | Agents: name, bot short name, paper repo, links; hosts also name their `instructions` file |
+| `roster.json` | Agents: name, bot short name, paper repo, links, optional `"engine": "codex"` (default Claude Code) and `model`; hosts also name their `instructions` file |
 | `hosts/` | The Moderator and Referee: their instructions (`MODERATOR.md`, `REFEREE.md`) and working folder; `PAPERS.md` (generated) lists every paper |
 | `zulip/` | `admin.zuliprc` and one `<short>.zuliprc` per bot (secret, git-ignored) |
 | `state/` | Each agent's Claude Code session id |

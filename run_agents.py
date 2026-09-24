@@ -5,7 +5,8 @@
     HOURS=2 python3 run_agents.py    # optional time cap
 
 This stands in for each author running `/loop` in their own paper repo with the
-`zulip-paper-community` skill installed. Each agent resumes its persisted
+`zulip-paper-community` skill installed, in Claude Code or, with
+`"engine": "codex"` in the roster, in Codex. Each agent resumes its persisted
 session (state/<agent>.session), works in its paper repo (read-only), keeps its
 skill state in workspace/<agent>/ (what .paper-community/ is for a real
 author), can use the shared folder, and ends each check with
@@ -16,6 +17,7 @@ import re
 import subprocess
 import threading
 import time
+import json
 import uuid
 
 from community import (BOOTH_SCRIPT, HERE, HOSTS, LOGS, SHARED, SKILL, STATE, WORKSPACE,
@@ -47,6 +49,58 @@ def claude_command(prompt, session, agent, ws):
             "--allowedTools", allowed, "--disallowedTools", "NotebookEdit"]
 
 
+CODEX_SANDBOX = ["-c", "sandbox_mode=workspace-write",
+                 "-c", "sandbox_workspace_write.network_access=true"]
+
+
+def run_claude(agent, prompt, session_file, ws, repo, env):
+    """One Claude Code check; returns its output."""
+    if session_file.exists():
+        session = ["--resume", session_file.read_text().strip()]
+    else:
+        session_id = str(uuid.uuid4())
+        session_file.write_text(session_id)
+        session = ["--session-id", session_id]
+    return subprocess.run(claude_command(prompt, session, agent, ws), cwd=repo, env=env,
+                          text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout
+
+
+def run_codex(agent, prompt, session_file, ws, repo, env):
+    """One Codex check. Codex has no per-tool allowlist, so it runs sandboxed in its own
+    workspace (writable, with network for Zulip) and reads the paper repo by path."""
+    last = ws / ".codex-last-message.md"
+    prompt = (f"Your paper's repository is {repo}: read its AGENTS.md first and never "
+              f"modify it. {prompt}")
+    opts = ["--json", "--skip-git-repo-check", "-o", str(last), *CODEX_SANDBOX]
+    if agent.get("model"):
+        opts += ["-m", agent["model"]]
+    if session_file.exists():
+        cmd = ["codex", "exec", "resume", *opts, session_file.read_text().strip(), prompt]
+    else:
+        cmd = ["codex", "exec", *opts, "-C", str(ws), "--add-dir", str(SHARED), prompt]
+    raw = subprocess.run(cmd, cwd=ws, env=env, text=True,
+                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout
+    if not session_file.exists():
+        for line in raw.splitlines():
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if event.get("type") == "thread.started":
+                session_file.write_text(event["thread_id"])
+                break
+    errors = [e.get("message", "") for e in map(_json_or_empty, raw.splitlines())
+              if e.get("type") in ("error", "turn.failed")]
+    return (last.read_text() if last.exists() else "") + "\n".join(errors)
+
+
+def _json_or_empty(line):
+    try:
+        return json.loads(line)
+    except json.JSONDecodeError:
+        return {}
+
+
 def run_agent(agent):
     name = agent["name"]
     ws = WORKSPACE / slug(name)
@@ -54,22 +108,18 @@ def run_agent(agent):
     session_file = STATE / f"{slug(name)}.session"
     instructions = HOSTS / agent["instructions"] if is_host(agent) else SKILL / "SKILL.md"
     env = dict(os.environ, PAPER_COMMUNITY_DIR=str(ws))
+    repo = (HERE / agent["repo"]).resolve()
+    run_check = run_codex if agent.get("engine") == "codex" else run_claude
     check = 0
     with open(LOGS / f"{slug(name)}.log", "a") as log:
         while not stopped():
             check += 1
             if session_file.exists():
-                session = ["--resume", session_file.read_text().strip()]
                 prompt = f"Check again. Re-read {instructions} first; it may have changed. {CONTEXT}"
             else:
-                session_id = str(uuid.uuid4())
-                session_file.write_text(session_id)
-                session = ["--session-id", session_id]
                 prompt = f'Follow {instructions} as "{name}". {CONTEXT} Do one check now.'
             log.write(f"\n===== check {check} =====\n")
-            out = subprocess.run(claude_command(prompt, session, agent, ws),
-                                 cwd=(HERE / agent["repo"]).resolve(), env=env, text=True,
-                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout
+            out = run_check(agent, prompt, session_file, ws, repo, env)
             log.write(out)
             log.flush()
             asked = re.findall(r"NEXT_CHECK:\s*(\d+(?:\.\d+)?)", out)
