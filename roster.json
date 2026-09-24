@@ -1,0 +1,84 @@
+{
+  "channel": "kitp-aiqmatter26-sim",
+  "agents": [
+    {
+      "name": "Lu2026",
+      "display": "Lu2026",
+      "short": "kitp-tnlean",
+      "repo": "../agentic-publication-protocol-dev/examples_source/kitp-tnlean/publication-staging",
+      "links": "paper https://arxiv.org/abs/2607.07857 · code https://github.com/LionSR/TNLean"
+    },
+    {
+      "name": "Zhao2026 (sim)",
+      "display": "Zhao2026 (sim)",
+      "short": "kitp-zhao",
+      "repo": "../agentic-publication-protocol-dev/examples_source/kitp-zhao/publication-staging",
+      "links": "paper https://arxiv.org/abs/2604.07639 · code https://github.com/haimengzhao/quantum-oracle-sketching"
+    },
+    {
+      "name": "Du2025 (sim)",
+      "display": "Du2025 (sim)",
+      "short": "kitp-chen",
+      "repo": "../agentic-publication-protocol-dev/examples_source/kitp-chen/publication-staging",
+      "links": "paper https://arxiv.org/abs/2506.08329 · code https://github.com/sjdu10/vmc_torch"
+    },
+    {
+      "name": "Gerdes2026 (sim)",
+      "display": "Gerdes2026 (sim)",
+      "short": "kitp-gerdes",
+      "repo": "../agentic-publication-protocol-dev/examples_source/kitp-gerdes/publication-staging",
+      "links": "paper https://arxiv.org/abs/2601.10774 · code https://github.com/mathisgerdes/bijx"
+    },
+    {
+      "name": "Hu2025 (sim)",
+      "display": "Hu2025 (sim)",
+      "short": "kitp-hu",
+      "repo": "../agentic-publication-protocol-dev/examples_source/kitp-hu/publication-staging",
+      "links": "paper https://arxiv.org/abs/2508.06614 · code https://github.com/Fangjun-Hu/Local-Diffusion-Models-and-Phases-of-Data-Distributions"
+    },
+    {
+      "name": "deSchoulepnikoff2026 (sim)",
+      "display": "deSchoulepnikoff2026 (sim)",
+      "short": "kitp-munozgil",
+      "repo": "../agentic-publication-protocol-dev/examples_source/kitp-munozgil/publication-staging",
+      "links": "paper https://arxiv.org/abs/2604.16015 · code https://github.com/qic-ibk/qdisc"
+    },
+    {
+      "name": "Tindall2024 (sim)",
+      "display": "Tindall2024 (sim)",
+      "short": "kitp-stoudenmire",
+      "repo": "../agentic-publication-protocol-dev/examples_source/kitp-stoudenmire/publication-staging",
+      "links": "paper https://arxiv.org/abs/2410.03572 · code https://github.com/JoeyT1994/ITensorNumericalAnalysis.jl"
+    },
+    {
+      "name": "Nagele2025 (sim)",
+      "display": "Nagele2025 (sim)",
+      "short": "kitp-marquardt",
+      "repo": "../agentic-publication-protocol-dev/examples_source/kitp-marquardt/publication-staging",
+      "links": "paper https://arxiv.org/abs/2509.24978 · code https://github.com/MaxNaeg/SciExplorer"
+    },
+    {
+      "name": "Qi2026",
+      "display": "Qi2026",
+      "short": "kitp-qi",
+      "repo": "../PaperProtocol/papers/sae-analysis-v1",
+      "links": "paper agent (published APP repo) https://github.com/XiaoliangQi/sae-analysis-v1"
+    },
+    {
+      "name": "Moderator",
+      "display": "Moderator",
+      "short": "kitp-moderator",
+      "repo": "hosts",
+      "attend": "MODERATOR.md",
+      "links": "none (not a paper agent)"
+    },
+    {
+      "name": "Referee",
+      "display": "Referee",
+      "short": "kitp-referee",
+      "repo": "hosts",
+      "attend": "REFEREE.md",
+      "links": "none (not a paper agent)"
+    }
+  ]
+}

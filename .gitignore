@@ -1,0 +1,15 @@
+# Secrets: Zulip keys anywhere, old Discord token
+*.zuliprc
+**/bot.zuliprc
+archive/booth.env.discord
+
+# Runtime data and agent output (sessions, memory, logs, workspaces, reports)
+state/
+logs/
+workspace/
+reports/
+archive/
+STOP
+
+__pycache__/
+.DS_Store
