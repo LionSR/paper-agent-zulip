@@ -5,9 +5,9 @@
     HOURS=2 python3 run_agents.py    # optional time cap
 
 This stands in for each author running `/loop` in their own paper repo with the
-`zulip-paper-community` skill installed. Every agent resumes its persisted
+`zulip-paper-community` skill installed. Each agent resumes its persisted
 session (state/<agent>.session), works in its paper repo (read-only), keeps its
-skill state in workspace/<agent>/ (as .paper-community/ would be for a real
+skill state in workspace/<agent>/ (what .paper-community/ is for a real
 author), can use the shared folder, and ends each check with
 `NEXT_CHECK: <minutes>` to choose when it looks again (1-60).
 """
@@ -18,76 +18,76 @@ import threading
 import time
 import uuid
 
-from zulip_api import HERE, load_roster
+from community import (BOOTH_SCRIPT, HERE, HOSTS, LOGS, SHARED, SKILL, STATE, WORKSPACE,
+                       is_host, load_roster, slug, write_papers_list)
 
-ROSTER = os.environ.get("ROSTER", "roster.json")
-roster = load_roster(ROSTER)
+roster = load_roster(os.environ.get("ROSTER", "roster.json"))
 hours = float(os.environ.get("HOURS", "0"))
 deadline = time.time() + hours * 3600 if hours > 0 else float("inf")
 STOP = HERE / "STOP"
-SKILL = HERE / "skills" / "zulip-paper-community"
-BOOTH = f"python3 {SKILL}/scripts/booth.py"
-SHARED = HERE / "workspace" / "shared"
-
-
-
-def slug(name):
-    return re.sub(r"[^A-Za-z0-9]+", "-", name).strip("-")
+USAGE_LIMIT = re.compile(r"hit your (session|usage|weekly) limit", re.I)
+BOOTH = f"python3 {BOOTH_SCRIPT}"
+CONTEXT = (f"BOOTH is `{BOOTH}` (run `BOOTH info` for your settings). "
+           f"The community rules are {SKILL}/references/participation.md.")
 
 
 def stopped():
     return STOP.exists() or time.time() >= deadline
 
 
-def run_agent(a):
-    s = slug(a["name"])
-    ws = HERE / "workspace" / s
+def claude_command(prompt, session, agent, ws):
+    allowed = ",".join([
+        "Read", "Grep", "Glob", "WebSearch", "WebFetch",
+        f"Bash({BOOTH}:*)", "Bash(python3:*)", "Bash(pdflatex:*)", "Bash(latexmk:*)",
+        "Bash(pandoc:*)", "Bash(mkdir:*)", "Bash(ls:*)", "Bash(cd:*)",
+        f"Edit(/{ws}/**)", f"Edit(/{SHARED}/**)",
+    ])
+    return ["claude", "-p", prompt, *session, "--model", agent.get("model", "sonnet"),
+            "--add-dir", str(ws), "--add-dir", str(SHARED),
+            "--allowedTools", allowed, "--disallowedTools", "NotebookEdit"]
+
+
+def run_agent(agent):
+    name = agent["name"]
+    ws = WORKSPACE / slug(name)
     ws.mkdir(parents=True, exist_ok=True)
-    session_file = HERE / "state" / f"{s}.session"
-    host = a.get("attend")  # Moderator/Referee instructions; paper agents use the skill
-    instructions = HERE / "prompts" / host if host else SKILL / "SKILL.md"
+    session_file = STATE / f"{slug(name)}.session"
+    instructions = HOSTS / agent["instructions"] if is_host(agent) else SKILL / "SKILL.md"
     env = dict(os.environ, PAPER_COMMUNITY_DIR=str(ws))
-    context = (f"BOOTH is `{BOOTH}` (run `BOOTH info` for your settings). "
-               f"The community rules are {SKILL}/references/participation.md.")
-    allowed = ",".join(["Read", "Grep", "Glob", f"Bash({BOOTH}:*)",
-                        f"Edit(/{ws}/**)", f"Edit(/{SHARED}/**)", "Bash(python3:*)",
-                        "Bash(pdflatex:*)", "Bash(latexmk:*)", "Bash(pandoc:*)",
-                        "Bash(mkdir:*)", "Bash(ls:*)", "Bash(cd:*)",
-                        "WebSearch", "WebFetch"])
     check = 0
-    with open(HERE / "logs" / f"{s}.log", "a") as log:
+    with open(LOGS / f"{slug(name)}.log", "a") as log:
         while not stopped():
             check += 1
             if session_file.exists():
                 session = ["--resume", session_file.read_text().strip()]
-                prompt = f"Check again. Re-read {instructions} first; it may have changed. {context}"
+                prompt = f"Check again. Re-read {instructions} first; it may have changed. {CONTEXT}"
             else:
-                sid = str(uuid.uuid4())
-                session_file.write_text(sid)
-                session = ["--session-id", sid]
-                prompt = f'Follow {instructions} as "{a["name"]}". {context} Do one check now.'
+                session_id = str(uuid.uuid4())
+                session_file.write_text(session_id)
+                session = ["--session-id", session_id]
+                prompt = f'Follow {instructions} as "{name}". {CONTEXT} Do one check now.'
             log.write(f"\n===== check {check} =====\n")
-            out = subprocess.run(
-                ["claude", "-p", prompt, *session, "--model", a.get("model", "sonnet"),
-                 "--add-dir", str(ws), "--add-dir", str(SHARED),
-                 "--allowedTools", allowed,
-                 "--disallowedTools", "NotebookEdit"],
-                cwd=(HERE / a["repo"]).resolve(), env=env, text=True,
-                stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout
+            out = subprocess.run(claude_command(prompt, session, agent, ws),
+                                 cwd=(HERE / agent["repo"]).resolve(), env=env, text=True,
+                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout
             log.write(out)
             log.flush()
             asked = re.findall(r"NEXT_CHECK:\s*(\d+(?:\.\d+)?)", out)
-            minutes = min(60.0, max(1.0, float(asked[-1]))) if asked else 5.0
-            print(f"{a['name']}: check {check} done, next in {minutes:g} min", flush=True)
+            if USAGE_LIMIT.search(out) and not asked:
+                minutes = 20.0  # plan limit reached: wait for it to reset, don't spin
+                print(f"{name}: usage limit reached, retrying in {minutes:g} min", flush=True)
+            else:
+                minutes = min(60.0, max(1.0, float(asked[-1]))) if asked else 5.0
+                print(f"{name}: check {check} done, next in {minutes:g} min", flush=True)
             wake = time.time() + minutes * 60
             while time.time() < wake and not stopped():
                 time.sleep(5)
 
 
 def main():
-    for d in ("state", "logs"):
-        (HERE / d).mkdir(exist_ok=True)
-    SHARED.mkdir(parents=True, exist_ok=True)
+    for d in (STATE, LOGS, SHARED):
+        d.mkdir(parents=True, exist_ok=True)
+    write_papers_list(roster)
     STOP.unlink(missing_ok=True)
     threads = [threading.Thread(target=run_agent, args=(a,)) for a in roster["agents"]]
     for t in threads:

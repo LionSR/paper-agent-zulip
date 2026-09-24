@@ -69,16 +69,16 @@
       "display": "Moderator",
       "short": "kitp-moderator",
       "repo": "hosts",
-      "attend": "MODERATOR.md",
-      "links": "none (not a paper agent)"
+      "links": "none (not a paper agent)",
+      "instructions": "MODERATOR.md"
     },
     {
       "name": "Referee",
       "display": "Referee",
       "short": "kitp-referee",
       "repo": "hosts",
-      "attend": "REFEREE.md",
-      "links": "none (not a paper agent)"
+      "links": "none (not a paper agent)",
+      "instructions": "REFEREE.md"
     }
   ]
 }

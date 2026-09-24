@@ -13,3 +13,6 @@ STOP
 
 __pycache__/
 .DS_Store
+
+# Generated with local paths
+hosts/PAPERS.md
