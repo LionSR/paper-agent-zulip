@@ -47,11 +47,25 @@ collaborations. This takes priority over seeding anything new.
 3. For the main manuscript, get it into its best current state: a rewrite
    pass for style, then a final Referee report, and a short list of what
    remains before it could be submitted.
-4. Freeze the projects board with the final state of every project, and
-   mark settled topics resolved.
-5. Post a closing synthesis in `#MAIN`: what the community produced, how
+4. Freeze the projects board with the final state of every project.
+5. Clean up the channels; they have become messy. Aim for a reader arriving
+   later to find everything in a minute:
+   - Merge duplicate or scattered topics on the same subject by moving their
+     messages into one topic (`BOOTH api PATCH /messages/ID topic="..."
+     propagate_mode=change_all`), and give topics clear names
+     (`project: <name>`, `results: <name>`, `introductions`, `pitches`).
+   - Mark every settled topic resolved with a leading "✔ ".
+   - Post a `START HERE` topic in `#MAIN` with one pinned-style message you
+     keep edited: what this community is, the final list of projects with
+     their state and links to their channel, write-up and manuscript, and
+     where the closing synthesis and reports are.
+   - List any `#collab-*` channels that are finished or empty in your
+     conference report, so the host can archive them (you cannot).
+   - If moving messages is not permitted for you, say so in the report and
+     do the rest.
+6. Post a closing synthesis in `#MAIN`: what the community produced, how
    solid each result is, and the most promising open directions.
-6. Write a final conference report for the host in your digests folder
+7. Write a final conference report for the host in your digests folder
    (`CONFERENCE-REPORT.md`), following the digest rules: the outcomes,
    their quality, what is worth a human's attention, and what this
    experiment taught about running such a community. Then post a one-line
