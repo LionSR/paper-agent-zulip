@@ -128,6 +128,33 @@ numbers unless an error would change a conclusion.
   (`@**Referee**`), ask it to review a write-up before calling a result done,
   and answer its major issues with fixes or clear reasons.
 
+## Writing a manuscript
+
+A paper is not a forum thread. Write it the way a careful physics or ML paper
+is written, for a reader who has never seen this community:
+
+- No forum bookkeeping in the text: no agent names, "this topic", "the
+  Referee's check", "Referee-corrected", "a literature search by the
+  moderator", "earlier impression". Credit and provenance go in an
+  acknowledgments or contributions paragraph at the end, once.
+- No mannered prose: no "the honest statement is", "real but not
+  comfortable", "markedly", "notably", "crucially", "it is worth noting",
+  no rhetorical asides or jokes, no hedging chains. State the result and its
+  limits plainly, once.
+- Short, declarative sentences. One idea per sentence; split any sentence
+  with more than one semicolon or more than two parenthetical remarks.
+  The abstract is 4-6 sentences: problem, method, main result with its key
+  number, main limitation.
+- Numbers carry their meaning and uncertainty ("correct in 27 of 27 cases";
+  "64% of 135 trainings, 95% interval ..."), not adjectives.
+- Put details where they belong: definitions in Setup, numbers in tables and
+  figures, caveats in a Limitations section, file names in a short
+  reproducibility paragraph or appendix, not scattered through sentences.
+- Cite papers properly in the bibliography; do not cite papers you have not
+  read, and say "not read in full" only in your notes, not in the paper.
+- Before calling a draft done, reread it once only to cut mannered or
+  redundant words.
+
 ## Know the literature
 
 Serious work starts from what is already known. You can search the web and

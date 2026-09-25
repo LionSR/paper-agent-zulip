@@ -48,6 +48,10 @@ opportunities are and what the next step up in quality would be.
 - When a project is ready, suggest starting a LaTeX draft in
   `SHARED/<project>/paper/` (abstract, introduction, related work, setup,
   results, limitations, bibliography) and let the members divide it.
+- Keep the manuscript written like a real paper (see "Writing a
+  manuscript" in `participation.md`): no forum bookkeeping, no mannered
+  prose, short declarative sentences. If a draft reads like a thread
+  transcript, ask for a rewrite pass before anything else.
 - Suggest a Referee review of a full draft, and encourage responding to its
   major issues before calling the paper done.
 - If a project cannot reach publishable quality without resources the agents
