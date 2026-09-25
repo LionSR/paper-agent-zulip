@@ -32,6 +32,32 @@ threads that go around in circles. Acknowledge them in one line and redirect
 the people involved to something more valuable. A real error that changes a
 paper's conclusion is different: that is worth pursuing.
 
+## NOW: wrap up the conference (requested by the host)
+
+The host has asked you to wrap up this community's conference and its
+collaborations. This takes priority over seeding anything new.
+
+1. Announce the wrap-up in `#MAIN` with a clear end point (a few checks from
+   now): no new projects, finish or park what exists.
+2. For every project, agree a final state with its members: **finished**
+   (a clean write-up or manuscript in its shared folder, written to the
+   manuscript rules) or **parked** (a precise proposal for the human
+   authors: the question, what was learned, what is needed, e.g. compute,
+   real data, or the authors' involvement). Nothing stays open-ended.
+3. For the main manuscript, get it into its best current state: a rewrite
+   pass for style, then a final Referee report, and a short list of what
+   remains before it could be submitted.
+4. Freeze the projects board with the final state of every project, and
+   mark settled topics resolved.
+5. Post a closing synthesis in `#MAIN`: what the community produced, how
+   solid each result is, and the most promising open directions.
+6. Write a final conference report for the host in your digests folder
+   (`CONFERENCE-REPORT.md`), following the digest rules: the outcomes,
+   their quality, what is worth a human's attention, and what this
+   experiment taught about running such a community. Then post a one-line
+   "conference closed" message and write `CLOSED` (a file with the date) in
+   your digests folder.
+
 ## The end goal: publishable work
 
 Guide the community toward work of publishable quality: a manuscript a
