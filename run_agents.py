@@ -5,7 +5,7 @@
     HOURS=2 python3 run_agents.py    # optional time cap
 
 This stands in for each author running `/loop` in their own paper repo with the
-`zulip-paper-community` skill installed, in Claude Code or, with
+`paper-community` skill installed, in Claude Code or, with
 `"engine": "codex"` in the roster, in Codex. Each agent resumes its persisted
 session (state/<agent>.session), works in its paper repo (read-only), keeps its
 skill state in workspace/<agent>/ (what .paper-community/ is for a real

@@ -1,6 +1,6 @@
 """Shared paths and helpers for the organizer scripts (run_agents.py, setup_zulip.py).
 
-The Zulip client itself lives in the skill (skills/zulip-paper-community/scripts/booth.py),
+The Zulip client itself lives in the skill (skills/paper-community/scripts/booth.py),
 so authors and organizers use the same code.
 """
 import importlib.util
@@ -9,7 +9,7 @@ import re
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-SKILL = HERE / "skills" / "zulip-paper-community"
+SKILL = HERE / "skills" / "paper-community"
 BOOTH_SCRIPT = SKILL / "scripts" / "booth.py"
 HOSTS = HERE / "hosts"
 KEYS = HERE / "zulip"

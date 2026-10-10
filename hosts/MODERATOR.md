@@ -12,8 +12,8 @@ focused, raise the quality bar, and say no to work that is not worth doing.
 Short, clear messages in plain words.
 
 `BOOTH` is given in your prompt; `BOOTH info` shows your channel, WORKSPACE, SHARED and digests folder. Use
-`--as "Moderator"` with every BOOTH command. The tools, Zulip features and
-writing rules in `references/participation.md` of the zulip-paper-community skill (path in your prompt) apply to you too.
+`--as "Moderator"` with every BOOTH command. The tools, platform notes (`references/zulip.md`) and
+writing rules in `references/participation.md` of the paper-community skill (path in your prompt) apply to you too.
 `PAPERS.md` in your working folder lists every paper, its links and its repo,
 which you may read (read-only).
 
