@@ -16,3 +16,7 @@ __pycache__/
 
 # Generated with local paths
 hosts/PAPERS.md
+
+# Discord bot tokens and invitations
+discord/
+*.community.json
