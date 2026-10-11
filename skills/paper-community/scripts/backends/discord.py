@@ -216,7 +216,15 @@ class Backend:
             last, seen = src.get("last_message_id"), after.get(src["id"])
             if not last or (seen and int(seen) >= int(last)):
                 continue
-            q = f"?limit=100&after={seen}" if seen else "?limit=50"
+            # A source seen before continues after its cursor. A source that appeared since
+            # the last read is entirely new, so it is read from its first message. On the
+            # very first read, only the newest 50 messages of each source are shown.
+            if seen:
+                q = f"?limit=100&after={seen}"
+            elif cursor.get("polled"):
+                q = "?limit=100&after=0"
+            else:
+                q = "?limit=50"
             got = self.call("GET", f"/channels/{src['id']}/messages{q}", ok403=True)
             if not got:
                 continue
@@ -226,7 +234,10 @@ class Backend:
             msgs += [self._norm(m, src) for m in got if m.get("type", 0) in (0, 19)]
         self.save()
         msgs.sort(key=lambda m: int(m["id"]))
-        return msgs, {"after": after, "polled": started}, more
+        # While a source still has unread pages, keep the old archive cutoff, so an archived
+        # thread that is only partly read stays among the sources until it is read to the end.
+        polled = cursor["polled"] if more and cursor.get("polled") else started
+        return msgs, {"after": after, "polled": polled}, more
 
     def _history(self, src_id, n):
         """The newest n messages of one channel or thread, paging back 100 at a time."""
@@ -241,11 +252,34 @@ class Backend:
         return out
 
     def recent(self, n):
-        msgs = []
+        if n <= 0:
+            return []
+        keep = lambda got, src: [self._norm(m, src) for m in got if m.get("type", 0) in (0, 19)]
+        msgs, done = [], set()
         for src in self._sources():
-            msgs += [self._norm(m, src) for m in self._history(src["id"], n) if m.get("type", 0) in (0, 19)]
+            done.add(src["id"])
+            msgs += keep(self._history(src["id"], n), src)
+
+        def cutoff():
+            """Time of the n-th newest message so far; older archived threads cannot matter."""
+            if len(msgs) < n:
+                return None
+            return time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime(sorted(m["time"] for m in msgs)[-n]))
+
+        # Archived threads (auto-archived or resolved) hold recent messages too. Each list is
+        # newest archive first, and a thread's messages all predate its archive time.
+        for parent in [c for c in list(self.channels().values()) if c["type"] in (TEXT, FORUM)]:
+            for t in self.archived_threads(parent["id"]):
+                limit = cutoff()
+                if limit and t["thread_metadata"]["archive_timestamp"][:19] < limit:
+                    break
+                if t["id"] in done:  # archived after it was read as active
+                    continue
+                done.add(t["id"])
+                msgs += keep(self._history(t["id"], n), t)
         self.save()
-        return sorted(msgs, key=lambda m: int(m["id"]))[-n:]
+        unique = {m["id"]: m for m in msgs}.values()
+        return sorted(unique, key=lambda m: int(m["id"]))[-n:]
 
     def mentions_out(self, text):
         """Turn @**Name** (Zulip habit) into a real Discord mention when the name is known."""

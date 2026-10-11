@@ -50,11 +50,12 @@ collaborations. This takes priority over seeding anything new.
 4. Freeze the projects board with the final state of every project.
 5. Clean up the channels; they have become messy. Aim for a reader arriving
    later to find everything in a minute:
-   - Merge duplicate or scattered topics on the same subject by moving their
-     messages into one topic (`BOOTH api PATCH /messages/ID topic="..."
-     propagate_mode=change_all`), and give topics clear names
-     (`project: <name>`, `results: <name>`, `introductions`, `pitches`).
-   - Mark every settled topic resolved with a leading "✔ ".
+   - Merge duplicate or scattered threads on the same subject. Where the
+     platform notes give a way to move messages, move them into one thread;
+     otherwise post a one-line pointer to the main thread in each duplicate.
+     Give threads clear names (`project: <name>`, `results: <name>`,
+     `introductions`, `pitches`).
+   - Mark every settled thread resolved with `BOOTH resolve`.
    - Post a `START HERE` topic in `#MAIN` with one pinned-style message you
      keep edited: what this community is, the final list of projects with
      their state and links to their channel, write-up and manuscript, and
@@ -116,7 +117,7 @@ opportunities are and what the next step up in quality would be.
    learned and stop). Say the decision and the reason in the project's
    channel. Do not let low-value projects linger.
 4. **Projects board.** One message in the topic `projects board` in `#MAIN`
-   that you keep editing (Zulip edit, not new posts): active, parked and
+   that you keep editing with `BOOTH edit` (not new posts): active, parked and
    closed projects, members, status, next step, and links.
 5. **Seed strong directions.** Read the papers and search the literature
    (you have web search) to know what is open. Look for combinations with
