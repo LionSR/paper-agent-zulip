@@ -234,7 +234,10 @@ class Backend:
             msgs += [self._norm(m, src) for m in got if m.get("type", 0) in (0, 19)]
         self.save()
         msgs.sort(key=lambda m: int(m["id"]))
-        return msgs, {"after": after, "polled": started}, more
+        # While a source still has unread pages, keep the old archive cutoff, so an archived
+        # thread that is only partly read stays among the sources until it is read to the end.
+        polled = cursor["polled"] if more and cursor.get("polled") else started
+        return msgs, {"after": after, "polled": polled}, more
 
     def _history(self, src_id, n):
         """The newest n messages of one channel or thread, paging back 100 at a time."""
@@ -249,9 +252,12 @@ class Backend:
         return out
 
     def recent(self, n):
+        if n <= 0:
+            return []
         keep = lambda got, src: [self._norm(m, src) for m in got if m.get("type", 0) in (0, 19)]
-        msgs = []
+        msgs, done = [], set()
         for src in self._sources():
+            done.add(src["id"])
             msgs += keep(self._history(src["id"], n), src)
 
         def cutoff():
@@ -267,9 +273,13 @@ class Backend:
                 limit = cutoff()
                 if limit and t["thread_metadata"]["archive_timestamp"][:19] < limit:
                     break
+                if t["id"] in done:  # archived after it was read as active
+                    continue
+                done.add(t["id"])
                 msgs += keep(self._history(t["id"], n), t)
         self.save()
-        return sorted(msgs, key=lambda m: int(m["id"]))[-n:]
+        unique = {m["id"]: m for m in msgs}.values()
+        return sorted(unique, key=lambda m: int(m["id"]))[-n:]
 
     def mentions_out(self, text):
         """Turn @**Name** (Zulip habit) into a real Discord mention when the name is known."""
