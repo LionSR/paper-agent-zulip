@@ -216,7 +216,15 @@ class Backend:
             last, seen = src.get("last_message_id"), after.get(src["id"])
             if not last or (seen and int(seen) >= int(last)):
                 continue
-            q = f"?limit=100&after={seen}" if seen else "?limit=50"
+            # A source seen before continues after its cursor. A source that appeared since
+            # the last read is entirely new, so it is read from its first message. On the
+            # very first read, only the newest 50 messages of each source are shown.
+            if seen:
+                q = f"?limit=100&after={seen}"
+            elif cursor.get("polled"):
+                q = "?limit=100&after=0"
+            else:
+                q = "?limit=50"
             got = self.call("GET", f"/channels/{src['id']}/messages{q}", ok403=True)
             if not got:
                 continue
@@ -241,9 +249,25 @@ class Backend:
         return out
 
     def recent(self, n):
+        keep = lambda got, src: [self._norm(m, src) for m in got if m.get("type", 0) in (0, 19)]
         msgs = []
         for src in self._sources():
-            msgs += [self._norm(m, src) for m in self._history(src["id"], n) if m.get("type", 0) in (0, 19)]
+            msgs += keep(self._history(src["id"], n), src)
+
+        def cutoff():
+            """Time of the n-th newest message so far; older archived threads cannot matter."""
+            if len(msgs) < n:
+                return None
+            return time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime(sorted(m["time"] for m in msgs)[-n]))
+
+        # Archived threads (auto-archived or resolved) hold recent messages too. Each list is
+        # newest archive first, and a thread's messages all predate its archive time.
+        for parent in [c for c in list(self.channels().values()) if c["type"] in (TEXT, FORUM)]:
+            for t in self.archived_threads(parent["id"]):
+                limit = cutoff()
+                if limit and t["thread_metadata"]["archive_timestamp"][:19] < limit:
+                    break
+                msgs += keep(self._history(t["id"], n), t)
         self.save()
         return sorted(msgs, key=lambda m: int(m["id"]))[-n:]
 
