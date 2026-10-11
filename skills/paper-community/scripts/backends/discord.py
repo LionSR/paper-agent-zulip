@@ -22,7 +22,20 @@ UA = "DiscordBot (https://github.com/LionSR/paper-agent-community, 1.0)"
 LIMIT = 1900          # Discord caps a message at 2000 characters
 EPOCH_MS = 1420070400000
 TEXT, FORUM = 0, 15
+THREAD_TYPES = (10, 11, 12)
+REQUIRE_TAG = 1 << 4  # forum channel flag: every new post needs a tag
+NAME_MAX = 100        # Discord's limit for channel and thread names
+RESOLVED = "✔ "
+PAGE = 100            # Discord's maximum messages or threads per request
 INDEX_KEEP = 5000
+
+
+def thread_name(name):
+    return name[:NAME_MAX]
+
+
+def resolved_name(name):
+    return (RESOLVED + name)[:NAME_MAX]
 
 
 def invitation(path):
@@ -62,6 +75,9 @@ class Backend:
     def call(self, method, path, payload=None, files=(), ok403=False):
         headers = {"Authorization": f"Bot {self.token}", "User-Agent": UA}
         data = None
+        if method == "GET" and payload:
+            path += ("&" if "?" in path else "?") + urllib.parse.urlencode(payload)
+            payload = None
         if files:
             boundary = f"----booth{time.time_ns()}"
             parts = [f"--{boundary}\r\nContent-Disposition: form-data; name=\"payload_json\"\r\n"
@@ -118,21 +134,38 @@ class Backend:
     def ensure(self, channel):
         self.channel(channel, create=True)
 
-    def threads(self, parent=None):
+    def active_threads(self):
         active = self.call("GET", f"/guilds/{self.guild}/threads/active")["threads"]
         for t in active:
             self.channels()[t["id"]] = t
-        if parent is None:
-            return active
-        archived = self.call("GET", f"/channels/{parent}/threads/archived/public?limit=100",
-                             ok403=True) or {"threads": []}
-        return [t for t in active if t.get("parent_id") == parent] + archived["threads"]
+        return active
+
+    def archived_threads(self, parent, since=None):
+        """Archived public threads of a channel, newest archive first, all pages
+        (or only those archived after `since`, an ISO timestamp)."""
+        before = None
+        while True:
+            q = {"limit": PAGE, **({"before": before} if before else {})}
+            got = self.call("GET", f"/channels/{parent}/threads/archived/public", q, ok403=True)
+            if not got:
+                return
+            for t in got["threads"]:
+                stamp = t["thread_metadata"]["archive_timestamp"]
+                if since and stamp <= since:
+                    return
+                self.channels()[t["id"]] = t
+                yield t
+            if not got.get("has_more") or not got["threads"]:
+                return
+            before = got["threads"][-1]["thread_metadata"]["archive_timestamp"]
 
     def thread(self, parent, name):
-        for t in self.threads(parent["id"]):
-            if t["name"] in (name, "✔ " + name):
+        """The thread called `name` in `parent`, open or resolved, active or archived."""
+        wanted = (thread_name(name), resolved_name(name))
+        for t in self.active_threads():
+            if t.get("parent_id") == parent["id"] and t["name"] in wanted:
                 return t
-        return None
+        return next((t for t in self.archived_threads(parent["id"]) if t["name"] in wanted), None)
 
     # --- messages ---------------------------------------------------------
     def _text(self, m):
@@ -156,21 +189,30 @@ class Backend:
         for u in m.get("mentions", []):
             self.s["users"][u.get("global_name") or u["username"]] = u["id"]
         self.s["where"][m["id"]] = where["id"]
-        is_thread = where["type"] in (10, 11, 12)
+        is_thread = where["type"] in THREAD_TYPES
         parent = self.channels().get(where["parent_id"], where) if is_thread else where
         return {"id": m["id"], "author": name, "channel": parent["name"],
                 "thread": where["name"] if is_thread else "", "text": self._text(m),
                 "time": ((int(m["id"]) >> 22) + EPOCH_MS) / 1000, "mine": a["id"] == self.uid}
 
-    def _sources(self):
-        """Text channels and active threads, each with its newest message id."""
-        out = [c for c in self.channels().values() if c["type"] == TEXT]
-        return out + self.threads()
+    def _sources(self, archived_since=None):
+        """Text channels and active threads, each with its newest message id, plus
+        threads archived after `archived_since` so a thread that auto-archives between
+        two reads is not missed."""
+        parents = [c for c in self.channels().values() if c["type"] in (TEXT, FORUM)]
+        out = [c for c in parents if c["type"] == TEXT] + self.active_threads()
+        if archived_since:
+            for c in parents:
+                out += self.archived_threads(c["id"], since=archived_since)
+        return out
 
     def read(self, cursor):
+        # `after=` returns the messages right after the cursor, oldest first, so a
+        # source with more than one page continues from where this read stopped.
         after = dict(cursor.get("after", {}))
+        started = time.strftime("%Y-%m-%dT%H:%M:%S+00:00", time.gmtime())
         msgs, more = [], False
-        for src in self._sources():
+        for src in self._sources(archived_since=cursor.get("polled")):
             last, seen = src.get("last_message_id"), after.get(src["id"])
             if not last or (seen and int(seen) >= int(last)):
                 continue
@@ -184,13 +226,24 @@ class Backend:
             msgs += [self._norm(m, src) for m in got if m.get("type", 0) in (0, 19)]
         self.save()
         msgs.sort(key=lambda m: int(m["id"]))
-        return msgs, {"after": after}, more
+        return msgs, {"after": after, "polled": started}, more
+
+    def _history(self, src_id, n):
+        """The newest n messages of one channel or thread, paging back 100 at a time."""
+        out, before = [], None
+        while len(out) < n:
+            q = {"limit": min(PAGE, n - len(out)), **({"before": before} if before else {})}
+            got = self.call("GET", f"/channels/{src_id}/messages", q, ok403=True) or []
+            out += got
+            if len(got) < q["limit"]:
+                break
+            before = min(int(m["id"]) for m in got)
+        return out
 
     def recent(self, n):
         msgs = []
         for src in self._sources():
-            got = self.call("GET", f"/channels/{src['id']}/messages?limit={min(n, 100)}", ok403=True) or []
-            msgs += [self._norm(m, src) for m in got if m.get("type", 0) in (0, 19)]
+            msgs += [self._norm(m, src) for m in self._history(src["id"], n) if m.get("type", 0) in (0, 19)]
         self.save()
         return sorted(msgs, key=lambda m: int(m["id"]))[-n:]
 
@@ -212,15 +265,31 @@ class Backend:
             self.s["where"][m["id"]] = channel_id
         return first
 
+    def _forum_tags(self, forum):
+        """A tag for a new post in a forum that requires one: the first tag anyone may use."""
+        if not forum.get("flags", 0) & REQUIRE_TAG:
+            return {}
+        tags = forum.get("available_tags", [])
+        tag = next((t for t in tags if not t.get("moderated")), tags[0] if tags else None)
+        return {"applied_tags": [tag["id"]]} if tag else {}
+
+    def _reopen(self, t, name):
+        """Give a resolved thread its open name back before posting in it again."""
+        if t["name"] != thread_name(name):
+            self.call("PATCH", f"/channels/{t['id']}", {"name": thread_name(name), "archived": False}, ok403=True)
+
     def post(self, channel, thread, text, files=()):
         parent = self.channel(channel, create=True)
         if parent["type"] == TEXT and not thread:
             mid = self._send(parent["id"], text, files)
         else:
             t = self.thread(parent, thread)
+            if t is not None:
+                self._reopen(t, thread)
             if t is None and parent["type"] == FORUM:
                 pieces = chunks(self.mentions_out(text))
-                payload = {"name": thread[:100], "message": {"content": pieces[0]}}
+                payload = {"name": thread_name(thread), "message": {"content": pieces[0]},
+                           **self._forum_tags(parent)}
                 t = self.call("POST", f"/channels/{parent['id']}/threads", payload,
                               files=files if len(pieces) == 1 else ())
                 mid = t["id"]  # a forum post's first message shares the thread's id
@@ -231,7 +300,7 @@ class Backend:
                 return mid
             if t is None:
                 t = self.call("POST", f"/channels/{parent['id']}/threads",
-                              {"name": thread[:100], "type": 11, "auto_archive_duration": 10080})
+                              {"name": thread_name(thread), "type": 11, "auto_archive_duration": 10080})
             mid = self._send(t["id"], text, files)
         self.save()
         return mid
@@ -257,7 +326,10 @@ class Backend:
         t = self.thread(self.channel(channel), thread)
         if t is None:
             raise SystemExit(f"No thread {thread!r} in #{channel}")
-        if self.call("PATCH", f"/channels/{t['id']}", {"name": ("✔ " + thread)[:100], "archived": True},
+        # Discord renames only active threads, so unarchive first, then rename and archive.
+        if t.get("thread_metadata", {}).get("archived"):
+            self.call("PATCH", f"/channels/{t['id']}", {"archived": False}, ok403=True)
+        if self.call("PATCH", f"/channels/{t['id']}", {"name": resolved_name(thread), "archived": True},
                      ok403=True) is None:
             self._send(t["id"], "✔ resolved")
 

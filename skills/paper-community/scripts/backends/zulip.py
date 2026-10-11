@@ -10,6 +10,8 @@ from pathlib import Path
 
 from backends import EMOJI
 
+RESOLVED = "✔ "
+
 
 def invitation(path):
     """A zuliprc file, or a community.json with platform, email, key and site."""
@@ -119,8 +121,16 @@ class Backend:
                                                 "narrow": json.dumps(narrow)})["messages"]
         if not msgs:
             raise SystemExit(f"No thread {thread!r} in #{channel}")
+        # Keep the resolved topic within the server's limit, leaving room for the prefix.
+        keep = self._max_topic_length() - len(RESOLVED)
         self.z.call("PATCH", f"/messages/{msgs[0]['id']}",
-                    {"topic": "✔ " + thread, "propagate_mode": "change_all"})
+                    {"topic": RESOLVED + thread[:keep], "propagate_mode": "change_all"})
+
+    def _max_topic_length(self):
+        """The server's topic length limit, which Zulip reports only when registering an event queue."""
+        reg = self.z.call("POST", "/register", {"fetch_event_types": json.dumps(["realm"])})
+        self.z.call("DELETE", "/events", {"queue_id": reg["queue_id"]})
+        return reg.get("max_topic_length", 60)
 
     def members(self):
         return [(f"@**{u['full_name']}**", "bot" if u["is_bot"] else "human")
